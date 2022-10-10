@@ -1,0 +1,67 @@
+buildscript {
+    ext {
+        // 버전을 명시하지 않으면 계속해서 최신 버전을 가져오기 때문에 버전을 명시해준다.
+        lombokVersion = '1.18.24'
+        querydslVersion = '5.0.0'
+    }
+}
+
+plugins {
+    id 'org.springframework.boot' version '2.7.1'
+    id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+    id 'java'
+}
+
+group 'com.springboot'
+version '0.0.1-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+    // Lombok
+    compileOnly("org.projectlombok:lombok:${lombokVersion}")
+    annotationProcessor("org.projectlombok:lombok:${lombokVersion}")
+
+    // QueryDSL
+    implementation "com.querydsl:querydsl-jpa:${querydslVersion}"
+    implementation "com.querydsl:querydsl-apt:${querydslVersion}"
+
+    // QueryDSL JPAAnnotationProcessor 사용 지정
+    annotationProcessor "com.querydsl:querydsl-apt:${querydslVersion}:jpa"
+    // java.lang.NoClassDefFoundError 발생 대응
+    annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
+    annotationProcessor 'javax.annotation:javax.annotation-api'
+}
+
+def querydslSrcDir = 'src/main/generated'
+sourceSets {
+    main {
+        java {
+            srcDirs += [ querydslSrcDir ]
+        }
+    }
+}
+
+tasks.withType(JavaCompile) {
+    options.generatedSourceOutputDirectory = file(querydslSrcDir)
+}
+
+compileJava {
+    // 자바 버전에 따라 Generated annotation 의 경로가 달라 명시적으로 지정하도록 변수 추가
+    options.compilerArgs << '-Aquerydsl.generatedAnnotationClass=javax.annotation.Generated'
+}
+
+clean {
+    // clean 실행 시 생성된 QClass 삭제
+    delete file(querydslSrcDir)
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
